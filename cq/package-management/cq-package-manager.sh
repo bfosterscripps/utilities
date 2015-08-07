@@ -40,8 +40,8 @@ function specifyEnvironment() {
 				hostname="$testEnvHostname"
 			else
 				echo "$testEnvHostname returns a code of $envHttpCode,"
-				read -p "Please specify Environment, e.g. dev4, prod2, or local. > " answer
-				specifyEnvironment $answer
+				env=""
+				specifyEnvironment
 			fi
 		elif [[ "$env" =~ "local" ]]; then
 			echo "Environment is local: $env"
@@ -203,14 +203,16 @@ fi
 
 mkdir -p packages
 
-if [ ! -f "./cq-package-filters.dat" ]; then # if your filter path list doesn't exist
-	echo "You are missing a filter path list, cq-package-filters.dat"
-	echo "Creating cq-package-filters.dat."
+filtersFile="cq-package-filters.dat"
+
+if [ ! -f "./$filtersFile" ]; then # if your filter path list doesn't exist
+	echo "You are missing a filter path list, $filtersFile"
+	echo "Creating $filtersFile"
 	touch cq-package-filters.dat
 	echo "Add each filter path on a new line and run this again."
 	exit 1
 else
-	declare -a filterPaths=("$(<cq-package-filters.dat)")
+	declare -a filterPaths=("$(<$filtersFile)")
 fi
 
 specifyAction
