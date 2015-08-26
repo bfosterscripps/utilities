@@ -1,4 +1,5 @@
 timely/
-.dat
+*.dat
 package-management/packages
 update-node/update-paths.dat
+config.sh
