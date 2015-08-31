@@ -27,7 +27,7 @@ function specifyEnvironment() {
 
 	# if no environment was passed, or you're wanting to create and install a package,
 	# ask the user for which environment to perform that action upon
-	if [[ $env == "" ]] || [[ $action =~ "B" ]]; then
+	if [[ $env == "" ]]; then
 			read -p "Please specify Environment, e.g. dev4, prod2, or local. > " env
 			specifyEnvironment
 	    echo -n ""
@@ -50,6 +50,9 @@ function specifyEnvironment() {
 			username="admin"
 			pass="admin"
 		fi
+		if [[ $action =~ "B" ]]; then
+			env=""
+		fi
 	fi
 }
 
@@ -71,8 +74,7 @@ function createPackage() {
 	count="0"
 	last="${#filterPaths[@]}" # the total number of elements in the path array above
 
-	for path in "${filterPaths[@]}"
-	do
+	for path in "${filterPaths[@]}"; do
 		count=`expr $count + 1`
 		if [ $count -eq 1 ] && [ $count -eq $last ]; then # this is the first and only filter path
 			updateCurl="$updateCurl[{\"root\":\"$path\",\"rules\":[]}]"
@@ -209,10 +211,13 @@ if [ ! -f "./$filtersFile" ]; then # if your filter path list doesn't exist
 	echo "You are missing a filter path list, $filtersFile"
 	echo "Creating $filtersFile"
 	touch cq-package-filters.dat
-	echo "Add each filter path on a new line and run this again."
+	>&2 echo "Add each filter path on a new line and run this again."
 	exit 1
 else
-	declare -a filterPaths=("$(<$filtersFile)")
+	declare -a filterPaths
+	while read line; do
+		filterPaths+=($line)
+	done < $filtersFile
 fi
 
 specifyAction
