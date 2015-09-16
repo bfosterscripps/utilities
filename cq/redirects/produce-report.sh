@@ -1,25 +1,49 @@
 #!/bin/bash
+# Author: Brandon Foster
+# Date: 2015-09-16
 
-inputFilename="log.dat"
+if [ $# -gt 0 ]; then
+  if [[ $1 == *"help"* ]] || [[ $1 == *"-h"* ]];then
+    echo "Usage: $0 [input filename] [output filename]"
+  else
+    inputFilename="$1"
+  fi
+else
+  inputFilename="log.dat"
+fi
+
+if [ $# -gt 2 ]; then
+  reportFileName="$2"
+else
+  reportFileName="$(date +%Y%m%d)_report.txt"
+fi
+
+
+
+# the names of some temporary files
 tempOutputFilename="log.temp"
-reportFileName="$(date +%Y%m%d)_report.txt"
 urlsFilename="urls.dat"
 
-rm $reportFileName
+rm -f $reportFileName
+rm -f $tempOutputFilename
+rm -f $urlsFilename
 
 while read line; do
-  date=$(echo $line | cut -d '|' -f 1)
-  echo "DEBUG: date: $date"
-  seconds=$(date -d"$date" +%Y%m%d)
-  echo "DEBUG: seconds: $seconds"
+
+  unformattedDate=$(echo $line | cut -d '|' -f 1)
+
+  formattedDate=$(date -d"$unformattedDate" +%Y%m%d)
+  if [ $? -ne 0 ];then
+    url=$(echo $line | cut -d '|' -f 3)
+    >&2 echo "ERROR: formattedDate: $formattedDate, unformattedDate: $unformattedDate, URL: $url, line: $line"
+    break
+  fi
 
   url=$(echo $line | cut -d '|' -f 3)
 
   # add this URL to the list of all URLs
   echo $url >> $urlsFilename
-
-  echo "DEBUG: URL: $url"
-  echo "$url|$seconds" >> $tempOutputFilename
+  echo "$url|$formattedDate" >> $tempOutputFilename
 
 done < $inputFilename
 
@@ -40,33 +64,33 @@ countOfDiff="0"
 sumOfDiff="0"
 while read url; do
 
-  echo "DEBUG: URL: $url"
   lastDate=$(cat $tempOutputFilename | grep $url | head -n 1 | cut -d '|' -f 2)
   firstDate=$(cat $tempOutputFilename | grep $url | tail -n 1 | cut -d '|' -f 2)
 
   if [ $firstDate -ne $lastDate ]; then
+    # format dates into seconds to get a diff
     firstDateSeconds=$(date -d"$firstDate" +%s)
-    echo "DEBUG: first date seconds: $firstDateSeconds"
     lastDateSeconds=$(date -d"$lastDate" +%s)
-    echo "DEBUG: last date seconds: $lastDateSeconds"
     diffSeconds=$(expr $firstDateSeconds - $lastDateSeconds)
-    echo "DEBUG: diffseconds: $diffSeconds"
+
     daysBetween=$(expr $diffSeconds / 86400) # there are 86,400 seconds in a day
-    echo "DEBUG: days between: $daysBetween"
-    # increment count of
+
+    # keep track of sum and count so you can create average
     countOfDiff=$(expr $countOfDiff + 1)
     sumOfDiff=$(expr $daysBetween + $sumOfDiff)
+
+    formattedFirstDate=$(date -d"$firstDate")
+    formattedLastDate=$(date -d"$lastDate")
+
+    echo "$url|$formattedFirstDate|$formattedLastDate|$daysBetween" | column -t -s '|' >> $reportFileName
   fi
-
-  formattedFirstDate=$(date -d"$firstDate")
-  formattedLastDate=$(date -d"$lastDate")
-
-  echo "$url|$formattedFirstDate|$formattedLastDate|$daysBetween" | column -t -s '|' >> $reportFileName
 
 done < $urlsFilename
 
-averageDays=$(expr $sumOfDiff / $countOfDiff)
-echo "Average Days Between: $averageDays" >> $reportFileName
+if [ $countOfDiff -gt 1 ]; then
+  averageDays=$(expr $sumOfDiff / $countOfDiff)
+  echo "Average Days Between: $averageDays" >> $reportFileName
+fi
 
-rm $tempOutputFilename
-rm $urlsFilename
+rm -f $tempOutputFilename
+rm -f $urlsFilename
