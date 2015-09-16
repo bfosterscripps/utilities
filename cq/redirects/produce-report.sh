@@ -5,6 +5,7 @@
 if [ $# -gt 0 ]; then
   if [[ $1 == *"help"* ]] || [[ $1 == *"-h"* ]];then
     echo "Usage: $0 [input filename] [output filename]"
+    exit 1
   else
     inputFilename="$1"
   fi
